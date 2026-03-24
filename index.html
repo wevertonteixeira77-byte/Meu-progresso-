@@ -13,7 +13,6 @@ body {
   text-align: center;
 }
 
-/* TÍTULO */
 h1 {
   font-size: 26px;
   margin-top: 15px;
@@ -44,13 +43,23 @@ h1 {
 /* NOMES */
 .nameBox {
   background: #222;
-  margin: 10px 0;
-  padding: 15px;
+  margin: 8px 0;
+  padding: 12px;
   border-radius: 12px;
-  font-size: 17px;
   display: flex;
-  justify-content: space-between;
-  align-items: center;
+  flex-direction: column;
+  align-items: flex-start;
+}
+
+.nameTitle {
+  font-size: 18px;
+  font-weight: bold;
+}
+
+.nameResumo {
+  font-size: 14px;
+  color: #aaa;
+  margin-top: 4px;
 }
 
 /* ATIVIDADES */
@@ -76,6 +85,12 @@ button {
   padding: 10px 15px;
   margin-top: 10px;
   border-radius: 10px;
+}
+
+/* INPUT */
+input[type="file"] {
+  font-size: 16px;
+  margin-top: 10px;
 }
 
 /* MÍDIA */
@@ -105,7 +120,7 @@ button {
   <div id="activities">
     <button onclick="toggle(this)">Perna</button>
     <button onclick="toggle(this)">Braço</button>
-    <button onclick="toggle(this)">Misto</button>
+    <button onclick="toggle(this)">Misto (Perna + Braço)</button>
     <button onclick="toggle(this)">Estudo</button>
   </div>
 
@@ -155,9 +170,13 @@ function loadNames() {
     let key = `day_${currentDay}_${p}`;
     let data = JSON.parse(localStorage.getItem(key));
 
-    let resumo = data ? data.activities.join(", ") : "—";
+    let resumo = data ? data.activities.join(", ") : "Nenhuma atividade";
 
-    box.innerHTML = `<span>${p}</span><span>${resumo}</span>`;
+    box.innerHTML = `
+      <div class="nameTitle">${p}</div>
+      <div class="nameResumo">${resumo}</div>
+    `;
+
     box.onclick = () => openPerson(p);
 
     list.appendChild(box);
