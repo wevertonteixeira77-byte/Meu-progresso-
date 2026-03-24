@@ -15,7 +15,6 @@ body {
 
 h1 {
   font-size: 26px;
-  margin-top: 15px;
 }
 
 /* CALENDÁRIO */
@@ -43,23 +42,22 @@ h1 {
 /* NOMES */
 .nameBox {
   background: #222;
-  margin: 8px 0;
-  padding: 12px;
+  margin: 10px 0;
+  padding: 15px;
   border-radius: 12px;
   display: flex;
-  flex-direction: column;
-  align-items: flex-start;
+  justify-content: space-between;
+  align-items: center;
 }
 
 .nameTitle {
-  font-size: 18px;
+  font-size: 20px;
   font-weight: bold;
 }
 
 .nameResumo {
-  font-size: 14px;
+  font-size: 16px;
   color: #aaa;
-  margin-top: 4px;
 }
 
 /* ATIVIDADES */
@@ -72,7 +70,6 @@ h1 {
 #activities button {
   padding: 18px;
   font-size: 16px;
-  border-radius: 10px;
 }
 
 .selected {
@@ -82,14 +79,7 @@ h1 {
 /* BOTÕES */
 button {
   font-size: 15px;
-  padding: 10px 15px;
-  margin-top: 10px;
-  border-radius: 10px;
-}
-
-/* INPUT */
-input[type="file"] {
-  font-size: 16px;
+  padding: 10px;
   margin-top: 10px;
 }
 
@@ -97,7 +87,6 @@ input[type="file"] {
 .media {
   max-width: 100%;
   margin-top: 15px;
-  border-radius: 10px;
 }
 </style>
 </head>
@@ -120,14 +109,12 @@ input[type="file"] {
   <div id="activities">
     <button onclick="toggle(this)">Perna</button>
     <button onclick="toggle(this)">Braço</button>
-    <button onclick="toggle(this)">Misto (Perna + Braço)</button>
+    <button onclick="toggle(this)">Misto</button>
     <button onclick="toggle(this)">Estudo</button>
   </div>
 
-  <br>
   <input type="file" id="fileInput">
 
-  <br>
   <button onclick="save()">Salvar</button>
   <button onclick="backToNames()">Voltar</button>
 
@@ -142,6 +129,22 @@ let currentPerson = null;
 
 const calendar = document.getElementById("calendar");
 
+// HISTÓRICO PARA BOTÃO VOLTAR
+let pageStack = [];
+
+function pushPage(page) {
+  pageStack.push(page);
+  history.pushState({page}, "");
+}
+
+window.onpopstate = function() {
+  if (pageStack.length > 1) {
+    pageStack.pop();
+    let last = pageStack[pageStack.length - 1];
+    showPage(last, false);
+  }
+};
+
 // calendário
 for (let i = 1; i <= 30; i++) {
   let div = document.createElement("div");
@@ -151,12 +154,21 @@ for (let i = 1; i <= 30; i++) {
   calendar.appendChild(div);
 }
 
+function showPage(page, addHistory = true) {
+  calendar.style.display = "none";
+  document.getElementById("namesPage").style.display = "none";
+  document.getElementById("activityPage").style.display = "none";
+
+  document.getElementById(page).style.display = "block";
+
+  if (addHistory) pushPage(page);
+}
+
 function openDay(day) {
   currentDay = day;
-  calendar.style.display = "none";
-  document.getElementById("namesPage").style.display = "block";
   document.getElementById("dayTitle").innerText = "Dia " + day;
   loadNames();
+  showPage("namesPage");
 }
 
 function loadNames() {
@@ -170,7 +182,7 @@ function loadNames() {
     let key = `day_${currentDay}_${p}`;
     let data = JSON.parse(localStorage.getItem(key));
 
-    let resumo = data ? data.activities.join(", ") : "Nenhuma atividade";
+    let resumo = data ? data.activities.join(", ") : "—";
 
     box.innerHTML = `
       <div class="nameTitle">${p}</div>
@@ -178,17 +190,15 @@ function loadNames() {
     `;
 
     box.onclick = () => openPerson(p);
-
     list.appendChild(box);
   });
 }
 
 function openPerson(p) {
   currentPerson = p;
-  document.getElementById("namesPage").style.display = "none";
-  document.getElementById("activityPage").style.display = "block";
   document.getElementById("personTitle").innerText = p + " - Dia " + currentDay;
   load();
+  showPage("activityPage");
 }
 
 function toggle(btn) {
@@ -234,27 +244,19 @@ function load() {
 
   if (data) {
     preview.innerHTML += `<p>${data.activities.join(", ")}</p>`;
-
-    if (data.media) {
-      if (data.media.includes("video")) {
-        preview.innerHTML += `<video class="media" controls src="${data.media}"></video>`;
-      } else {
-        preview.innerHTML += `<img class="media" src="${data.media}">`;
-      }
-    }
   }
 }
 
 function back() {
-  document.getElementById("namesPage").style.display = "none";
-  calendar.style.display = "grid";
+  history.back();
 }
 
 function backToNames() {
-  document.getElementById("activityPage").style.display = "none";
-  document.getElementById("namesPage").style.display = "block";
-  loadNames();
+  history.back();
 }
+
+// INÍCIO
+pageStack = ["calendar"];
 </script>
 
 </body>
