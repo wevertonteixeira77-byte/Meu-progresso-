@@ -1,0 +1,242 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<title>Progresso</title>
+
+<style>
+body {
+  margin: 0;
+  font-family: Arial;
+  background: #111;
+  color: white;
+  text-align: center;
+}
+
+/* TÍTULO */
+h1 {
+  font-size: 26px;
+  margin-top: 15px;
+}
+
+/* CALENDÁRIO */
+#calendar {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 10px;
+  padding: 15px;
+}
+
+.day {
+  background: #222;
+  padding: 25px;
+  font-size: 18px;
+  border-radius: 12px;
+  cursor: pointer;
+}
+
+/* TELAS */
+#namesPage, #activityPage {
+  display: none;
+  padding: 15px;
+}
+
+/* NOMES */
+.nameBox {
+  background: #222;
+  margin: 10px 0;
+  padding: 15px;
+  border-radius: 12px;
+  font-size: 17px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+/* ATIVIDADES */
+#activities {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 10px;
+}
+
+#activities button {
+  padding: 18px;
+  font-size: 16px;
+  border-radius: 10px;
+}
+
+.selected {
+  background: green;
+}
+
+/* BOTÕES */
+button {
+  font-size: 15px;
+  padding: 10px 15px;
+  margin-top: 10px;
+  border-radius: 10px;
+}
+
+/* MÍDIA */
+.media {
+  max-width: 100%;
+  margin-top: 15px;
+  border-radius: 10px;
+}
+</style>
+</head>
+
+<body>
+
+<h1>📅 Progresso</h1>
+
+<div id="calendar"></div>
+
+<div id="namesPage">
+  <h2 id="dayTitle"></h2>
+  <div id="namesList"></div>
+  <button onclick="back()">Voltar</button>
+</div>
+
+<div id="activityPage">
+  <h2 id="personTitle"></h2>
+
+  <div id="activities">
+    <button onclick="toggle(this)">Perna</button>
+    <button onclick="toggle(this)">Braço</button>
+    <button onclick="toggle(this)">Misto</button>
+    <button onclick="toggle(this)">Estudo</button>
+  </div>
+
+  <br>
+  <input type="file" id="fileInput">
+
+  <br>
+  <button onclick="save()">Salvar</button>
+  <button onclick="backToNames()">Voltar</button>
+
+  <div id="preview"></div>
+</div>
+
+<script>
+const people = ["Weverton", "Matheus", "Paulo"];
+
+let currentDay = null;
+let currentPerson = null;
+
+const calendar = document.getElementById("calendar");
+
+// calendário
+for (let i = 1; i <= 30; i++) {
+  let div = document.createElement("div");
+  div.className = "day";
+  div.innerText = i;
+  div.onclick = () => openDay(i);
+  calendar.appendChild(div);
+}
+
+function openDay(day) {
+  currentDay = day;
+  calendar.style.display = "none";
+  document.getElementById("namesPage").style.display = "block";
+  document.getElementById("dayTitle").innerText = "Dia " + day;
+  loadNames();
+}
+
+function loadNames() {
+  const list = document.getElementById("namesList");
+  list.innerHTML = "";
+
+  people.forEach(p => {
+    let box = document.createElement("div");
+    box.className = "nameBox";
+
+    let key = `day_${currentDay}_${p}`;
+    let data = JSON.parse(localStorage.getItem(key));
+
+    let resumo = data ? data.activities.join(", ") : "—";
+
+    box.innerHTML = `<span>${p}</span><span>${resumo}</span>`;
+    box.onclick = () => openPerson(p);
+
+    list.appendChild(box);
+  });
+}
+
+function openPerson(p) {
+  currentPerson = p;
+  document.getElementById("namesPage").style.display = "none";
+  document.getElementById("activityPage").style.display = "block";
+  document.getElementById("personTitle").innerText = p + " - Dia " + currentDay;
+  load();
+}
+
+function toggle(btn) {
+  btn.classList.toggle("selected");
+}
+
+function save() {
+  const activities = [];
+  document.querySelectorAll(".selected").forEach(b => {
+    activities.push(b.innerText);
+  });
+
+  const file = document.getElementById("fileInput").files[0];
+  const key = `day_${currentDay}_${currentPerson}`;
+
+  if (file) {
+    let reader = new FileReader();
+    reader.onload = function () {
+      localStorage.setItem(key, JSON.stringify({
+        activities,
+        media: reader.result
+      }));
+      alert("Salvo!");
+      load();
+    };
+    reader.readAsDataURL(file);
+  } else {
+    localStorage.setItem(key, JSON.stringify({
+      activities,
+      media: null
+    }));
+    alert("Salvo!");
+    load();
+  }
+}
+
+function load() {
+  const key = `day_${currentDay}_${currentPerson}`;
+  const data = JSON.parse(localStorage.getItem(key));
+
+  const preview = document.getElementById("preview");
+  preview.innerHTML = "";
+
+  if (data) {
+    preview.innerHTML += `<p>${data.activities.join(", ")}</p>`;
+
+    if (data.media) {
+      if (data.media.includes("video")) {
+        preview.innerHTML += `<video class="media" controls src="${data.media}"></video>`;
+      } else {
+        preview.innerHTML += `<img class="media" src="${data.media}">`;
+      }
+    }
+  }
+}
+
+function back() {
+  document.getElementById("namesPage").style.display = "none";
+  calendar.style.display = "grid";
+}
+
+function backToNames() {
+  document.getElementById("activityPage").style.display = "none";
+  document.getElementById("namesPage").style.display = "block";
+  loadNames();
+}
+</script>
+
+</body>
+</html>
