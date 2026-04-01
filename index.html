@@ -13,9 +13,7 @@ body {
   text-align: center;
 }
 
-h1 {
-  font-size: 24px;
-}
+h1 { font-size: 24px; }
 
 /* CALENDÁRIO */
 #calendar {
@@ -31,12 +29,17 @@ h1 {
   font-size: 18px;
   border-radius: 10px;
   cursor: pointer;
+  transition: 0.2s;
+}
+
+.day:hover {
+  transform: scale(1.05);
 }
 
 /* HISTÓRICO */
 #historico {
   display: flex;
-  overflow: hidden;
+  overflow-x: auto;
   gap: 10px;
   padding: 10px;
 }
@@ -46,7 +49,6 @@ h1 {
   background: #222;
   border-radius: 10px;
   padding: 5px;
-  text-align: center;
 }
 
 .card img, .card video {
@@ -68,16 +70,7 @@ h1 {
   border-radius: 10px;
   display: flex;
   justify-content: space-between;
-}
-
-.nameTitle {
-  font-size: 18px;
-  font-weight: bold;
-}
-
-.nameResumo {
-  font-size: 14px;
-  color: #aaa;
+  cursor: pointer;
 }
 
 /* ATIVIDADES */
@@ -89,7 +82,6 @@ h1 {
 
 #activities button {
   padding: 15px;
-  font-size: 14px;
 }
 
 .selected {
@@ -101,7 +93,6 @@ button {
   padding: 10px;
 }
 
-/* PREVIEW */
 .media {
   max-width: 100%;
   margin-top: 10px;
@@ -114,8 +105,6 @@ button {
 <h1>📅 Progresso</h1>
 
 <div id="calendar"></div>
-
-<!-- HISTÓRICO -->
 <div id="historico"></div>
 
 <div id="namesPage">
@@ -134,10 +123,10 @@ button {
     <button onclick="toggle(this)">Estudo</button>
   </div>
 
-  <input type="file" id="fileInput">
+  <input type="file" id="fileInput" accept="image/*,video/*">
 
   <button onclick="save()">Salvar</button>
-  <button onclick="backToNames()">Voltar</button>
+  <button onclick="back()">Voltar</button>
 
   <div id="preview"></div>
 </div>
@@ -147,18 +136,31 @@ const people = ["Weverton", "Matheus", "Paulo"];
 let currentDay = null;
 let currentPerson = null;
 
-const calendar = document.getElementById("calendar");
+function getData(day, person) {
+  return JSON.parse(localStorage.getItem(`day_${day}_${person}`) || "null");
+}
+
+function setData(day, person, data) {
+  localStorage.setItem(`day_${day}_${person}`, JSON.stringify(data));
+}
 
 // CALENDÁRIO
+const calendar = document.getElementById("calendar");
+
 for (let i = 1; i <= 30; i++) {
   let div = document.createElement("div");
   div.className = "day";
   div.innerText = i;
+
+  if (getData(i, people[0])) {
+    div.style.background = "green";
+  }
+
   div.onclick = () => openDay(i);
   calendar.appendChild(div);
 }
 
-// HISTÓRICO (DIA ANTERIOR)
+// HISTÓRICO
 function carregarHistorico() {
   const container = document.getElementById("historico");
   container.innerHTML = "";
@@ -169,23 +171,16 @@ function carregarHistorico() {
   if (diaAnterior < 1) return;
 
   people.forEach(p => {
-    const key = `day_${diaAnterior}_${p}`;
-    const data = JSON.parse(localStorage.getItem(key));
+    const data = getData(diaAnterior, p);
 
     if (data && data.media) {
       let div = document.createElement("div");
       div.className = "card";
 
-      if (data.media.includes("video")) {
-        div.innerHTML = `
-          <video src="${data.media}" autoplay muted loop></video>
-          <small>${p}</small>
-        `;
+      if (data.type && data.type.startsWith("video")) {
+        div.innerHTML = `<video src="${data.media}" autoplay muted loop></video><small>${p}</small>`;
       } else {
-        div.innerHTML = `
-          <img src="${data.media}">
-          <small>${p}</small>
-        `;
+        div.innerHTML = `<img src="${data.media}"><small>${p}</small>`;
       }
 
       container.appendChild(div);
@@ -193,37 +188,24 @@ function carregarHistorico() {
   });
 }
 
-// LOOP AUTOMÁTICO
-let scrollPos = 0;
-setInterval(() => {
-  const container = document.getElementById("historico");
-  scrollPos += 1;
-  container.scrollLeft = scrollPos;
-}, 50);
-
 // NAVEGAÇÃO
 let stack = ["calendar"];
 
-window.onpopstate = () => {
-  if (stack.length > 1) {
-    stack.pop();
-    show(stack[stack.length - 1], false);
-  }
-};
-
-function show(id, push=true) {
-  document.getElementById("calendar").style.display = "none";
-  document.getElementById("namesPage").style.display = "none";
-  document.getElementById("activityPage").style.display = "none";
+function show(id) {
+  ["calendar","namesPage","activityPage"].forEach(p => {
+    document.getElementById(p).style.display = "none";
+  });
 
   document.getElementById(id).style.display = "block";
-
-  if (push) {
-    stack.push(id);
-    history.pushState({}, "");
-  }
+  stack.push(id);
 }
 
+function back() {
+  stack.pop();
+  show(stack[stack.length - 1]);
+}
+
+// ABRIR DIA
 function openDay(day) {
   currentDay = day;
   document.getElementById("dayTitle").innerText = "Dia " + day;
@@ -236,17 +218,13 @@ function loadNames() {
   list.innerHTML = "";
 
   people.forEach(p => {
+    let data = getData(currentDay, p);
+
     let box = document.createElement("div");
     box.className = "nameBox";
-
-    let key = `day_${currentDay}_${p}`;
-    let data = JSON.parse(localStorage.getItem(key));
-
-    let resumo = data ? data.activities.join(", ") : "—";
-
     box.innerHTML = `
-      <div class="nameTitle">${p}</div>
-      <div class="nameResumo">${resumo}</div>
+      <div>${p}</div>
+      <div>${data ? data.activities.join(", ") : "—"}</div>
     `;
 
     box.onclick = () => openPerson(p);
@@ -254,17 +232,20 @@ function loadNames() {
   });
 }
 
+// ABRIR PESSOA
 function openPerson(p) {
   currentPerson = p;
-  document.getElementById("personTitle").innerText = p + " - Dia " + currentDay;
+  document.getElementById("personTitle").innerText = `${p} - Dia ${currentDay}`;
   load();
   show("activityPage");
 }
 
+// TOGGLE
 function toggle(btn) {
   btn.classList.toggle("selected");
 }
 
+// SALVAR
 function save() {
   const activities = [];
   document.querySelectorAll(".selected").forEach(b => {
@@ -272,49 +253,49 @@ function save() {
   });
 
   const file = document.getElementById("fileInput").files[0];
-  const key = `day_${currentDay}_${currentPerson}`;
 
-  if (file) {
-    let reader = new FileReader();
-    reader.onload = function () {
-      localStorage.setItem(key, JSON.stringify({
-        activities,
-        media: reader.result
-      }));
-      alert("Salvo!");
-      load();
-      carregarHistorico();
-    };
-    reader.readAsDataURL(file);
-  } else {
-    localStorage.setItem(key, JSON.stringify({
-      activities,
-      media: null
-    }));
+  const salvar = (media = null, type = null) => {
+    setData(currentDay, currentPerson, { activities, media, type });
     alert("Salvo!");
     load();
     carregarHistorico();
+  };
+
+  if (file) {
+    const reader = new FileReader();
+    reader.onload = () => salvar(reader.result, file.type);
+    reader.readAsDataURL(file);
+  } else {
+    salvar();
   }
 }
 
+// LOAD
 function load() {
-  const key = `day_${currentDay}_${currentPerson}`;
-  const data = JSON.parse(localStorage.getItem(key));
+  const data = getData(currentDay, currentPerson);
 
   const preview = document.getElementById("preview");
   preview.innerHTML = "";
 
-  if (data) {
-    preview.innerHTML += `<p>${data.activities.join(", ")}</p>`;
+  document.querySelectorAll("#activities button").forEach(b => {
+    b.classList.remove("selected");
+  });
+
+  if (!data) return;
+
+  data.activities.forEach(a => {
+    document.querySelectorAll("#activities button").forEach(b => {
+      if (b.innerText === a) b.classList.add("selected");
+    });
+  });
+
+  if (data.media) {
+    if (data.type && data.type.startsWith("video")) {
+      preview.innerHTML += `<video class="media" src="${data.media}" controls></video>`;
+    } else {
+      preview.innerHTML += `<img class="media" src="${data.media}">`;
+    }
   }
-}
-
-function back() {
-  history.back();
-}
-
-function backToNames() {
-  history.back();
 }
 
 // INÍCIO
