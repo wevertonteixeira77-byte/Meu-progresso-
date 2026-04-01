@@ -15,6 +15,7 @@ body {
 
 h1 {
   font-size: 26px;
+  margin: 10px;
 }
 
 /* CALENDÁRIO */
@@ -33,6 +34,19 @@ h1 {
   cursor: pointer;
 }
 
+/* HISTÓRICO */
+#historico {
+  display: flex;
+  gap: 10px;
+  padding: 10px;
+  overflow-x: auto;
+}
+
+.histItem {
+  min-width: 100px;
+  font-size: 12px;
+}
+
 /* TELAS */
 #namesPage, #activityPage {
   display: none;
@@ -42,12 +56,9 @@ h1 {
 /* NOMES */
 .nameBox {
   background: #222;
-  margin: 10px 0;
-  padding: 15px;
+  margin: 8px 0;
+  padding: 12px;
   border-radius: 12px;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
 }
 
 .nameTitle {
@@ -56,7 +67,7 @@ h1 {
 }
 
 .nameResumo {
-  font-size: 16px;
+  font-size: 14px;
   color: #aaa;
 }
 
@@ -86,7 +97,8 @@ button {
 /* MÍDIA */
 .media {
   max-width: 100%;
-  margin-top: 15px;
+  margin-top: 10px;
+  border-radius: 10px;
 }
 </style>
 </head>
@@ -96,6 +108,9 @@ button {
 <h1>📅 Progresso</h1>
 
 <div id="calendar"></div>
+
+<!-- HISTÓRICO -->
+<div id="historico"></div>
 
 <div id="namesPage">
   <h2 id="dayTitle"></h2>
@@ -109,7 +124,7 @@ button {
   <div id="activities">
     <button onclick="toggle(this)">Perna</button>
     <button onclick="toggle(this)">Braço</button>
-    <button onclick="toggle(this)">Misto</button>
+    <button onclick="toggle(this)">Misto (Perna + Braço)</button>
     <button onclick="toggle(this)">Estudo</button>
   </div>
 
@@ -129,7 +144,7 @@ let currentPerson = null;
 
 const calendar = document.getElementById("calendar");
 
-// HISTÓRICO PARA BOTÃO VOLTAR
+// HISTÓRICO (voltar do celular)
 let pageStack = [];
 
 function pushPage(page) {
@@ -145,7 +160,7 @@ window.onpopstate = function() {
   }
 };
 
-// calendário
+// CALENDÁRIO
 for (let i = 1; i <= 30; i++) {
   let div = document.createElement("div");
   div.className = "day";
@@ -182,7 +197,7 @@ function loadNames() {
     let key = `day_${currentDay}_${p}`;
     let data = JSON.parse(localStorage.getItem(key));
 
-    let resumo = data ? data.activities.join(", ") : "—";
+    let resumo = data ? data.activities.join(", ") : "Nenhuma atividade";
 
     box.innerHTML = `
       <div class="nameTitle">${p}</div>
@@ -223,6 +238,7 @@ function save() {
       }));
       alert("Salvo!");
       load();
+      carregarHistorico();
     };
     reader.readAsDataURL(file);
   } else {
@@ -232,6 +248,7 @@ function save() {
     }));
     alert("Salvo!");
     load();
+    carregarHistorico();
   }
 }
 
@@ -244,7 +261,49 @@ function load() {
 
   if (data) {
     preview.innerHTML += `<p>${data.activities.join(", ")}</p>`;
+
+    if (data.media) {
+      if (data.media.includes("video")) {
+        preview.innerHTML += `<video class="media" controls src="${data.media}"></video>`;
+      } else {
+        preview.innerHTML += `<img class="media" src="${data.media}">`;
+      }
+    }
   }
+}
+
+function carregarHistorico() {
+  const container = document.getElementById("historico");
+  container.innerHTML = "";
+
+  const hoje = new Date().getDate();
+  const diaAnterior = hoje - 1;
+
+  if (diaAnterior < 1) return;
+
+  people.forEach(p => {
+    const key = `day_${diaAnterior}_${p}`;
+    const data = JSON.parse(localStorage.getItem(key));
+
+    if (data && data.media) {
+      let div = document.createElement("div");
+      div.className = "histItem";
+
+      if (data.media.includes("video")) {
+        div.innerHTML = `
+          <video width="100%" src="${data.media}" muted autoplay loop></video>
+          <div>${p}</div>
+        `;
+      } else {
+        div.innerHTML = `
+          <img src="${data.media}" width="100%">
+          <div>${p}</div>
+        `;
+      }
+
+      container.appendChild(div);
+    }
+  });
 }
 
 function back() {
@@ -257,6 +316,7 @@ function backToNames() {
 
 // INÍCIO
 pageStack = ["calendar"];
+carregarHistorico();
 </script>
 
 </body>
