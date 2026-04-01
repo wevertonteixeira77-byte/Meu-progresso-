@@ -40,28 +40,27 @@ h1 { font-size: 24px; }
   padding: 10px;
 }
 
+/* 👇 ISSO AQUI CORRIGE O BUG DO GRID */
+#calendar.show {
+  display: grid;
+}
+
 .day {
   background: #222;
   padding: 20px;
   border-radius: 10px;
   cursor: pointer;
-  transition: 0.2s;
-}
-
-.day:hover {
-  transform: scale(1.05);
 }
 
 /* TELAS */
-#namesPage, #activityPage {
+.page {
   display: none;
-  padding: 10px;
 }
 
 /* NOMES */
 .nameBox {
   background: #222;
-  margin: 8px 0;
+  margin: 8px;
   padding: 10px;
   border-radius: 10px;
   display: flex;
@@ -74,6 +73,7 @@ h1 { font-size: 24px; }
   display: grid;
   grid-template-columns: repeat(2, 1fr);
   gap: 8px;
+  padding: 10px;
 }
 
 #activities button {
@@ -85,7 +85,7 @@ h1 { font-size: 24px; }
 }
 
 button {
-  margin-top: 10px;
+  margin: 10px;
   padding: 10px;
 }
 </style>
@@ -95,21 +95,23 @@ button {
 
 <h1>📅 Progresso</h1>
 
-<!-- BARRA -->
 <div id="progressBarContainer">
   <div id="progressBar"></div>
 </div>
 <p id="progressText"></p>
 
-<div id="calendar"></div>
+<!-- CALENDÁRIO -->
+<div id="calendar" class="page show"></div>
 
-<div id="namesPage">
+<!-- NOMES -->
+<div id="namesPage" class="page">
   <h2 id="dayTitle"></h2>
   <div id="namesList"></div>
-  <button onclick="show('calendar')">Voltar</button>
+  <button onclick="goToCalendar()">Voltar</button>
 </div>
 
-<div id="activityPage">
+<!-- ATIVIDADES -->
+<div id="activityPage" class="page">
   <h2 id="personTitle"></h2>
 
   <div id="activities">
@@ -120,7 +122,7 @@ button {
   </div>
 
   <button onclick="save()">Salvar</button>
-  <button onclick="show('namesPage')">Voltar</button>
+  <button onclick="goToNames()">Voltar</button>
 </div>
 
 <script>
@@ -128,24 +130,35 @@ const people = ["Weverton", "Matheus", "Paulo"];
 let currentDay = null;
 let currentPerson = null;
 
-// CALENDÁRIO
-const calendar = document.getElementById("calendar");
+// CRIAR CALENDÁRIO
+function criarCalendario() {
+  const calendar = document.getElementById("calendar");
+  calendar.innerHTML = "";
 
-for (let i = 1; i <= 30; i++) {
-  let div = document.createElement("div");
-  div.className = "day";
-  div.innerText = i;
-  div.onclick = () => openDay(i);
-  calendar.appendChild(div);
+  for (let i = 1; i <= 30; i++) {
+    let div = document.createElement("div");
+    div.className = "day";
+    div.innerText = i;
+    div.onclick = () => openDay(i);
+    calendar.appendChild(div);
+  }
 }
 
-// NAVEGAÇÃO SIMPLES
-function show(id) {
-  document.getElementById("calendar").style.display = "none";
-  document.getElementById("namesPage").style.display = "none";
-  document.getElementById("activityPage").style.display = "none";
+criarCalendario();
 
+// TROCA DE TELA (SEM BUG)
+function showPage(id) {
+  document.querySelectorAll(".page").forEach(p => p.style.display = "none");
   document.getElementById(id).style.display = "block";
+}
+
+// NAVEGAÇÃO CORRETA
+function goToCalendar() {
+  showPage("calendar");
+}
+
+function goToNames() {
+  showPage("namesPage");
 }
 
 // ABRIR DIA
@@ -154,7 +167,7 @@ function openDay(day) {
   document.getElementById("dayTitle").innerText = "Dia " + day;
   loadNames();
   atualizarProgresso();
-  show("namesPage");
+  showPage("namesPage");
 }
 
 // LISTA DE NOMES
@@ -182,7 +195,7 @@ function openPerson(p) {
   currentPerson = p;
   document.getElementById("personTitle").innerText = `${p} - Dia ${currentDay}`;
   load();
-  show("activityPage");
+  showPage("activityPage");
 }
 
 // TOGGLE
