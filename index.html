@@ -40,11 +40,6 @@ h1 { font-size: 24px; }
   padding: 10px;
 }
 
-/* 👇 ISSO AQUI CORRIGE O BUG DO GRID */
-#calendar.show {
-  display: grid;
-}
-
 .day {
   background: #222;
   padding: 20px;
@@ -95,13 +90,18 @@ button {
 
 <h1>📅 Progresso</h1>
 
+<!-- PROGRESSO -->
 <div id="progressBarContainer">
   <div id="progressBar"></div>
 </div>
 <p id="progressText"></p>
 
+<!-- RANKING -->
+<h3>🏆 Ranking</h3>
+<div id="ranking"></div>
+
 <!-- CALENDÁRIO -->
-<div id="calendar" class="page show"></div>
+<div id="calendar" class="page" style="display:block;"></div>
 
 <!-- NOMES -->
 <div id="namesPage" class="page">
@@ -144,15 +144,13 @@ function criarCalendario() {
   }
 }
 
-criarCalendario();
-
-// TROCA DE TELA (SEM BUG)
+// MOSTRAR TELA
 function showPage(id) {
   document.querySelectorAll(".page").forEach(p => p.style.display = "none");
   document.getElementById(id).style.display = "block";
 }
 
-// NAVEGAÇÃO CORRETA
+// NAVEGAÇÃO
 function goToCalendar() {
   showPage("calendar");
 }
@@ -170,7 +168,7 @@ function openDay(day) {
   showPage("namesPage");
 }
 
-// LISTA DE NOMES
+// NOMES
 function loadNames() {
   const list = document.getElementById("namesList");
   list.innerHTML = "";
@@ -219,6 +217,8 @@ function save() {
   alert("Salvo!");
   load();
   atualizarProgresso();
+  atualizarRanking();
+  atualizarCalendario();
 }
 
 // LOAD
@@ -255,6 +255,63 @@ function atualizarProgresso() {
   document.getElementById("progressText").innerText =
     `${count}/${people.length} concluído`;
 }
+
+// CALENDÁRIO VERDE
+function atualizarCalendario() {
+  const dias = document.querySelectorAll(".day");
+
+  dias.forEach((div, index) => {
+    let dia = index + 1;
+    let feito = false;
+
+    people.forEach(p => {
+      const data = JSON.parse(localStorage.getItem(`day_${dia}_${p}`) || "null");
+      if (data && data.activities.length > 0) {
+        feito = true;
+      }
+    });
+
+    div.style.background = feito ? "green" : "#222";
+  });
+}
+
+// RANKING
+function atualizarRanking() {
+  let resultado = [];
+
+  people.forEach(p => {
+    let total = 0;
+
+    for (let d = 1; d <= 30; d++) {
+      const data = JSON.parse(localStorage.getItem(`day_${d}_${p}`) || "null");
+      if (data && data.activities.length > 0) {
+        total++;
+      }
+    }
+
+    resultado.push({ nome: p, total });
+  });
+
+  resultado.sort((a, b) => b.total - a.total);
+
+  const div = document.getElementById("ranking");
+  div.innerHTML = "";
+
+  resultado.forEach((p, i) => {
+    div.innerHTML += `<p>${i + 1}º - ${p.nome} (${p.total} dias)</p>`;
+  });
+}
+
+// BLOQUEAR SAÍDA (corrige WhatsApp)
+history.pushState(null, null, location.href);
+window.onpopstate = function () {
+  showPage("calendar");
+};
+
+// INÍCIO
+criarCalendario();
+atualizarCalendario();
+atualizarRanking();
 </script>
 
 </body>
