@@ -14,8 +14,7 @@ body {
 }
 
 h1 {
-  font-size: 26px;
-  margin: 10px;
+  font-size: 24px;
 }
 
 /* CALENDÁRIO */
@@ -23,46 +22,56 @@ h1 {
   display: grid;
   grid-template-columns: repeat(4, 1fr);
   gap: 10px;
-  padding: 15px;
+  padding: 10px;
 }
 
 .day {
   background: #222;
-  padding: 25px;
+  padding: 20px;
   font-size: 18px;
-  border-radius: 12px;
+  border-radius: 10px;
   cursor: pointer;
 }
 
 /* HISTÓRICO */
 #historico {
   display: flex;
+  overflow: hidden;
   gap: 10px;
   padding: 10px;
-  overflow-x: auto;
 }
 
-.histItem {
+.card {
   min-width: 100px;
-  font-size: 12px;
+  background: #222;
+  border-radius: 10px;
+  padding: 5px;
+  text-align: center;
+}
+
+.card img, .card video {
+  width: 100%;
+  border-radius: 8px;
 }
 
 /* TELAS */
 #namesPage, #activityPage {
   display: none;
-  padding: 15px;
+  padding: 10px;
 }
 
 /* NOMES */
 .nameBox {
   background: #222;
   margin: 8px 0;
-  padding: 12px;
-  border-radius: 12px;
+  padding: 10px;
+  border-radius: 10px;
+  display: flex;
+  justify-content: space-between;
 }
 
 .nameTitle {
-  font-size: 20px;
+  font-size: 18px;
   font-weight: bold;
 }
 
@@ -75,30 +84,27 @@ h1 {
 #activities {
   display: grid;
   grid-template-columns: repeat(2, 1fr);
-  gap: 10px;
+  gap: 8px;
 }
 
 #activities button {
-  padding: 18px;
-  font-size: 16px;
+  padding: 15px;
+  font-size: 14px;
 }
 
 .selected {
   background: green;
 }
 
-/* BOTÕES */
 button {
-  font-size: 15px;
-  padding: 10px;
   margin-top: 10px;
+  padding: 10px;
 }
 
-/* MÍDIA */
+/* PREVIEW */
 .media {
   max-width: 100%;
   margin-top: 10px;
-  border-radius: 10px;
 }
 </style>
 </head>
@@ -124,7 +130,7 @@ button {
   <div id="activities">
     <button onclick="toggle(this)">Perna</button>
     <button onclick="toggle(this)">Braço</button>
-    <button onclick="toggle(this)">Misto (Perna + Braço)</button>
+    <button onclick="toggle(this)">Misto</button>
     <button onclick="toggle(this)">Estudo</button>
   </div>
 
@@ -138,27 +144,10 @@ button {
 
 <script>
 const people = ["Weverton", "Matheus", "Paulo"];
-
 let currentDay = null;
 let currentPerson = null;
 
 const calendar = document.getElementById("calendar");
-
-// HISTÓRICO (voltar do celular)
-let pageStack = [];
-
-function pushPage(page) {
-  pageStack.push(page);
-  history.pushState({page}, "");
-}
-
-window.onpopstate = function() {
-  if (pageStack.length > 1) {
-    pageStack.pop();
-    let last = pageStack[pageStack.length - 1];
-    showPage(last, false);
-  }
-};
 
 // CALENDÁRIO
 for (let i = 1; i <= 30; i++) {
@@ -169,21 +158,77 @@ for (let i = 1; i <= 30; i++) {
   calendar.appendChild(div);
 }
 
-function showPage(page, addHistory = true) {
-  calendar.style.display = "none";
+// HISTÓRICO (DIA ANTERIOR)
+function carregarHistorico() {
+  const container = document.getElementById("historico");
+  container.innerHTML = "";
+
+  const hoje = new Date().getDate();
+  const diaAnterior = hoje - 1;
+
+  if (diaAnterior < 1) return;
+
+  people.forEach(p => {
+    const key = `day_${diaAnterior}_${p}`;
+    const data = JSON.parse(localStorage.getItem(key));
+
+    if (data && data.media) {
+      let div = document.createElement("div");
+      div.className = "card";
+
+      if (data.media.includes("video")) {
+        div.innerHTML = `
+          <video src="${data.media}" autoplay muted loop></video>
+          <small>${p}</small>
+        `;
+      } else {
+        div.innerHTML = `
+          <img src="${data.media}">
+          <small>${p}</small>
+        `;
+      }
+
+      container.appendChild(div);
+    }
+  });
+}
+
+// LOOP AUTOMÁTICO
+let scrollPos = 0;
+setInterval(() => {
+  const container = document.getElementById("historico");
+  scrollPos += 1;
+  container.scrollLeft = scrollPos;
+}, 50);
+
+// NAVEGAÇÃO
+let stack = ["calendar"];
+
+window.onpopstate = () => {
+  if (stack.length > 1) {
+    stack.pop();
+    show(stack[stack.length - 1], false);
+  }
+};
+
+function show(id, push=true) {
+  document.getElementById("calendar").style.display = "none";
   document.getElementById("namesPage").style.display = "none";
   document.getElementById("activityPage").style.display = "none";
 
-  document.getElementById(page).style.display = "block";
+  document.getElementById(id).style.display = "block";
 
-  if (addHistory) pushPage(page);
+  if (push) {
+    stack.push(id);
+    history.pushState({}, "");
+  }
 }
 
 function openDay(day) {
   currentDay = day;
   document.getElementById("dayTitle").innerText = "Dia " + day;
   loadNames();
-  showPage("namesPage");
+  show("namesPage");
 }
 
 function loadNames() {
@@ -197,7 +242,7 @@ function loadNames() {
     let key = `day_${currentDay}_${p}`;
     let data = JSON.parse(localStorage.getItem(key));
 
-    let resumo = data ? data.activities.join(", ") : "Nenhuma atividade";
+    let resumo = data ? data.activities.join(", ") : "—";
 
     box.innerHTML = `
       <div class="nameTitle">${p}</div>
@@ -213,7 +258,7 @@ function openPerson(p) {
   currentPerson = p;
   document.getElementById("personTitle").innerText = p + " - Dia " + currentDay;
   load();
-  showPage("activityPage");
+  show("activityPage");
 }
 
 function toggle(btn) {
@@ -261,49 +306,7 @@ function load() {
 
   if (data) {
     preview.innerHTML += `<p>${data.activities.join(", ")}</p>`;
-
-    if (data.media) {
-      if (data.media.includes("video")) {
-        preview.innerHTML += `<video class="media" controls src="${data.media}"></video>`;
-      } else {
-        preview.innerHTML += `<img class="media" src="${data.media}">`;
-      }
-    }
   }
-}
-
-function carregarHistorico() {
-  const container = document.getElementById("historico");
-  container.innerHTML = "";
-
-  const hoje = new Date().getDate();
-  const diaAnterior = hoje - 1;
-
-  if (diaAnterior < 1) return;
-
-  people.forEach(p => {
-    const key = `day_${diaAnterior}_${p}`;
-    const data = JSON.parse(localStorage.getItem(key));
-
-    if (data && data.media) {
-      let div = document.createElement("div");
-      div.className = "histItem";
-
-      if (data.media.includes("video")) {
-        div.innerHTML = `
-          <video width="100%" src="${data.media}" muted autoplay loop></video>
-          <div>${p}</div>
-        `;
-      } else {
-        div.innerHTML = `
-          <img src="${data.media}" width="100%">
-          <div>${p}</div>
-        `;
-      }
-
-      container.appendChild(div);
-    }
-  });
 }
 
 function back() {
@@ -315,7 +318,6 @@ function backToNames() {
 }
 
 // INÍCIO
-pageStack = ["calendar"];
 carregarHistorico();
 </script>
 
