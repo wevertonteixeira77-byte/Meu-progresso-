@@ -15,6 +15,23 @@ body {
 
 h1 { font-size: 24px; }
 
+/* PROGRESSO */
+#progressBarContainer {
+  width: 90%;
+  height: 20px;
+  background: #333;
+  margin: 10px auto;
+  border-radius: 10px;
+  overflow: hidden;
+}
+
+#progressBar {
+  height: 100%;
+  width: 0%;
+  background: green;
+  transition: 0.3s;
+}
+
 /* CALENDÁRIO */
 #calendar {
   display: grid;
@@ -26,7 +43,6 @@ h1 { font-size: 24px; }
 .day {
   background: #222;
   padding: 20px;
-  font-size: 18px;
   border-radius: 10px;
   cursor: pointer;
   transition: 0.2s;
@@ -34,26 +50,6 @@ h1 { font-size: 24px; }
 
 .day:hover {
   transform: scale(1.05);
-}
-
-/* HISTÓRICO */
-#historico {
-  display: flex;
-  overflow-x: auto;
-  gap: 10px;
-  padding: 10px;
-}
-
-.card {
-  min-width: 100px;
-  background: #222;
-  border-radius: 10px;
-  padding: 5px;
-}
-
-.card img, .card video {
-  width: 100%;
-  border-radius: 8px;
 }
 
 /* TELAS */
@@ -92,11 +88,6 @@ button {
   margin-top: 10px;
   padding: 10px;
 }
-
-.media {
-  max-width: 100%;
-  margin-top: 10px;
-}
 </style>
 </head>
 
@@ -104,13 +95,18 @@ button {
 
 <h1>📅 Progresso</h1>
 
+<!-- BARRA -->
+<div id="progressBarContainer">
+  <div id="progressBar"></div>
+</div>
+<p id="progressText"></p>
+
 <div id="calendar"></div>
-<div id="historico"></div>
 
 <div id="namesPage">
   <h2 id="dayTitle"></h2>
   <div id="namesList"></div>
-  <button onclick="back()">Voltar</button>
+  <button onclick="show('calendar')">Voltar</button>
 </div>
 
 <div id="activityPage">
@@ -119,30 +115,18 @@ button {
   <div id="activities">
     <button onclick="toggle(this)">Perna</button>
     <button onclick="toggle(this)">Braço</button>
-    <button onclick="toggle(this)">Misto</button>
     <button onclick="toggle(this)">Estudo</button>
+    <button onclick="toggle(this)">Alongamento</button>
   </div>
 
-  <input type="file" id="fileInput" accept="image/*,video/*">
-
   <button onclick="save()">Salvar</button>
-  <button onclick="back()">Voltar</button>
-
-  <div id="preview"></div>
+  <button onclick="show('namesPage')">Voltar</button>
 </div>
 
 <script>
 const people = ["Weverton", "Matheus", "Paulo"];
 let currentDay = null;
 let currentPerson = null;
-
-function getData(day, person) {
-  return JSON.parse(localStorage.getItem(`day_${day}_${person}`) || "null");
-}
-
-function setData(day, person, data) {
-  localStorage.setItem(`day_${day}_${person}`, JSON.stringify(data));
-}
 
 // CALENDÁRIO
 const calendar = document.getElementById("calendar");
@@ -151,58 +135,17 @@ for (let i = 1; i <= 30; i++) {
   let div = document.createElement("div");
   div.className = "day";
   div.innerText = i;
-
-  if (getData(i, people[0])) {
-    div.style.background = "green";
-  }
-
   div.onclick = () => openDay(i);
   calendar.appendChild(div);
 }
 
-// HISTÓRICO
-function carregarHistorico() {
-  const container = document.getElementById("historico");
-  container.innerHTML = "";
-
-  const hoje = new Date().getDate();
-  const diaAnterior = hoje - 1;
-
-  if (diaAnterior < 1) return;
-
-  people.forEach(p => {
-    const data = getData(diaAnterior, p);
-
-    if (data && data.media) {
-      let div = document.createElement("div");
-      div.className = "card";
-
-      if (data.type && data.type.startsWith("video")) {
-        div.innerHTML = `<video src="${data.media}" autoplay muted loop></video><small>${p}</small>`;
-      } else {
-        div.innerHTML = `<img src="${data.media}"><small>${p}</small>`;
-      }
-
-      container.appendChild(div);
-    }
-  });
-}
-
-// NAVEGAÇÃO
-let stack = ["calendar"];
-
+// NAVEGAÇÃO SIMPLES
 function show(id) {
-  ["calendar","namesPage","activityPage"].forEach(p => {
-    document.getElementById(p).style.display = "none";
-  });
+  document.getElementById("calendar").style.display = "none";
+  document.getElementById("namesPage").style.display = "none";
+  document.getElementById("activityPage").style.display = "none";
 
   document.getElementById(id).style.display = "block";
-  stack.push(id);
-}
-
-function back() {
-  stack.pop();
-  show(stack[stack.length - 1]);
 }
 
 // ABRIR DIA
@@ -210,15 +153,17 @@ function openDay(day) {
   currentDay = day;
   document.getElementById("dayTitle").innerText = "Dia " + day;
   loadNames();
+  atualizarProgresso();
   show("namesPage");
 }
 
+// LISTA DE NOMES
 function loadNames() {
   const list = document.getElementById("namesList");
   list.innerHTML = "";
 
   people.forEach(p => {
-    let data = getData(currentDay, p);
+    let data = JSON.parse(localStorage.getItem(`day_${currentDay}_${p}`) || "null");
 
     let box = document.createElement("div");
     box.className = "nameBox";
@@ -248,34 +193,24 @@ function toggle(btn) {
 // SALVAR
 function save() {
   const activities = [];
+
   document.querySelectorAll(".selected").forEach(b => {
     activities.push(b.innerText);
   });
 
-  const file = document.getElementById("fileInput").files[0];
+  localStorage.setItem(
+    `day_${currentDay}_${currentPerson}`,
+    JSON.stringify({ activities })
+  );
 
-  const salvar = (media = null, type = null) => {
-    setData(currentDay, currentPerson, { activities, media, type });
-    alert("Salvo!");
-    load();
-    carregarHistorico();
-  };
-
-  if (file) {
-    const reader = new FileReader();
-    reader.onload = () => salvar(reader.result, file.type);
-    reader.readAsDataURL(file);
-  } else {
-    salvar();
-  }
+  alert("Salvo!");
+  load();
+  atualizarProgresso();
 }
 
 // LOAD
 function load() {
-  const data = getData(currentDay, currentPerson);
-
-  const preview = document.getElementById("preview");
-  preview.innerHTML = "";
+  const data = JSON.parse(localStorage.getItem(`day_${currentDay}_${currentPerson}`) || "null");
 
   document.querySelectorAll("#activities button").forEach(b => {
     b.classList.remove("selected");
@@ -288,18 +223,25 @@ function load() {
       if (b.innerText === a) b.classList.add("selected");
     });
   });
-
-  if (data.media) {
-    if (data.type && data.type.startsWith("video")) {
-      preview.innerHTML += `<video class="media" src="${data.media}" controls></video>`;
-    } else {
-      preview.innerHTML += `<img class="media" src="${data.media}">`;
-    }
-  }
 }
 
-// INÍCIO
-carregarHistorico();
+// PROGRESSO
+function atualizarProgresso() {
+  let count = 0;
+
+  people.forEach(p => {
+    const data = JSON.parse(localStorage.getItem(`day_${currentDay}_${p}`) || "null");
+    if (data && data.activities.length > 0) {
+      count++;
+    }
+  });
+
+  const percent = (count / people.length) * 100;
+
+  document.getElementById("progressBar").style.width = percent + "%";
+  document.getElementById("progressText").innerText =
+    `${count}/${people.length} concluído`;
+}
 </script>
 
 </body>
